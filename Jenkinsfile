@@ -2,81 +2,72 @@ pipeline {
     agent any
 
     environment {
-        // Environment variables for Python version and virtual environment path
         PYTHON_VERSION = '3.8'
-        VENV_PATH = '.venv'
-    }
-
-    triggers {
-        // Poll the GitHub repository for changes every 2 minutes
-        pollSCM('H/2 * * * *')
     }
 
     stages {
         stage('Checkout') {
             steps {
                 echo 'Cloning the GitHub repository...'
-                git 'https://github.com/your-username/flask.git' // Replace with your forked repo link
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/PAARTHARNAZ/flask.git',
+                        credentialsId: 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 // Replace with your credentials ID
+                    ]]
+                ])
             }
         }
 
         stage('Setup Python Environment') {
             steps {
-                script {
-                    echo 'Setting up Python virtual environment...'
-                    // Set up virtual environment and install dependencies
-                    sh """
-                    python${PYTHON_VERSION} -m venv ${VENV_PATH}
-                    source ${VENV_PATH}/bin/activate
+                echo 'Setting up Python environment...'
+                sh '''
+                    python3 -m venv venv
+                    source venv/bin/activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
-                    """
-                }
+                '''
             }
         }
 
         stage('Run Unit Tests') {
             steps {
-                script {
-                    echo 'Running unit tests...'
-                    sh """
-                    source ${VENV_PATH}/bin/activate
-                    pytest
-                    """
-                }
+                echo 'Running Unit Tests...'
+                sh '''
+                    source venv/bin/activate
+                    pytest --maxfail=1 --disable-warnings -q
+                '''
             }
         }
 
         stage('Build') {
             steps {
-                script {
-                    echo 'Building the Flask app...'
-                    // Add any build-related tasks here (e.g., packaging)
-                    echo 'No specific build tasks needed for this Flask app.'
-                }
+                echo 'Building the application...'
+                sh '''
+                    source venv/bin/activate
+                    python setup.py install
+                '''
             }
         }
 
         stage('Deploy') {
             steps {
-                script {
-                    echo 'Deploying the Flask app...'
-                    // Deploy to your environment (e.g., SCP to server, Docker, or local setup)
-                    sh """
-                    source ${VENV_PATH}/bin/activate
-                    python app.py &
-                    """
-                }
+                echo 'Deploying the application...'
+                sh '''
+                    source venv/bin/activate
+                    # Add your deployment commands here
+                    # e.g., gunicorn app:app
+                '''
             }
         }
     }
 
     post {
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed. Check the logs for details.'
+        always {
+            echo 'Cleaning up...'
+            sh 'rm -rf venv'
         }
     }
 }

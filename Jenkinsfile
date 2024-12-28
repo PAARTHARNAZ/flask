@@ -8,8 +8,8 @@ pipeline {
     }
 
     triggers {
-        // Automatically trigger the pipeline when changes are pushed to GitHub
-        githubPush()
+        // Poll the GitHub repository for changes every 2 minutes
+        pollSCM('H/2 * * * *')
     }
 
     stages {
